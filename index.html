@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>XRP Change Overlay</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+    }
+
+    .container {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 260px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        opacity: 0;
+        transition: opacity 1s ease;
+    }
+
+    .container.visible {
+        opacity: 1;
+    }
+
+    .btn {
+        background: rgba(0, 0, 0, 0.65);
+        border-radius: 10px;
+        padding: 14px;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        backdrop-filter: blur(6px);
+        transform: translateY(-20px);
+        opacity: 0;
+        transition: all 0.6s ease;
+    }
+
+    .btn.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .green { color: #00ff9c; }
+    .red { color: #ff4d4d; }
+</style>
+</head>
+<body>
+
+<div class="container" id="container">
+    <div class="btn" id="b1">24H: ...</div>
+    <div class="btn" id="b2">48H: ...</div>
+    <div class="btn" id="b3">72H: ...</div>
+    <div class="btn" id="b4">168H: ...</div>
+</div>
+
+<script>
+const container = document.getElementById("container");
+const buttons = [
+    document.getElementById("b1"),
+    document.getElementById("b2"),
+    document.getElementById("b3"),
+    document.getElementById("b4"),
+];
+
+const periods = [24, 48, 72, 168];
+
+// --- FETCH DATA ---
+async function getPrice(hoursAgo) {
+    const now = Date.now();
+    const past = now - hoursAgo * 60 * 60 * 1000;
+
+    const url = `https://api.binance.com/api/v3/klines?symbol=XRPUSDT&interval=1h&startTime=${past}&limit=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const pastPrice = parseFloat(data[0][1]);
+
+    const currentRes = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT");
+    const currentData = await currentRes.json();
+    const currentPrice = parseFloat(currentData.price);
+
+    const change = ((currentPrice - pastPrice) / pastPrice) * 100;
+    return change;
+}
+
+// --- UPDATE UI ---
+async function updateData() {
+    for (let i = 0; i < periods.length; i++) {
+        const val = await getPrice(periods[i]);
+        const el = buttons[i];
+
+        const color = val >= 0 ? "green" : "red";
+        el.innerHTML = `${periods[i]}H: <span class="${color}">${val.toFixed(2)}%</span>`;
+    }
+}
+
+// --- ANIMATION ---
+function showSequence() {
+    container.classList.add("visible");
+
+    buttons.forEach((btn, i) => {
+        setTimeout(() => {
+            btn.classList.add("show");
+        }, i * 300);
+    });
+}
+
+function hideSequence() {
+    buttons.forEach(btn => btn.classList.remove("show"));
+    container.classList.remove("visible");
+}
+
+// --- LOOP ---
+async function loop() {
+    while (true) {
+        await updateData();
+
+        showSequence();
+        await sleep(30000);
+
+        hideSequence();
+        await sleep(60000);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+loop();
+</script>
+
+</body>
+</html>
