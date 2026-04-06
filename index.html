@@ -21,16 +21,15 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    width: fit-content;
 
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(-10px);
     transition: all 1s ease;
 }
 
 .container.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
 }
 
 /* BUTTON */
@@ -42,24 +41,23 @@ html, body {
     font-weight: 600;
     color: white;
 
-    display: inline-block;
-    width: fit-content;
-
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(-20px);
     transition: all 0.8s ease;
+
+    white-space: nowrap;
 }
 
 /* SHOW */
 .btn.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
 }
 
-/* HIDE ANIMATION (SLOW + UP) */
+/* HIDE (SLIDE RIGHT) */
 .btn.hide {
     opacity: 0;
-    transform: translateY(-40px);
+    transform: translateX(120px);
     transition: all 3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -83,14 +81,13 @@ html, body {
     <div class="btn" id="b4"></div>
     <div class="btn" id="b5"></div>
     <div class="btn" id="b6"></div>
+    <div class="btn" id="b7"></div>
 </div>
 
 <script>
 const container = document.getElementById("container");
 
-const buttons = [
-    b1, b2, b3, b4, b5, b6
-];
+const buttons = [b1, b2, b3, b4, b5, b6, b7];
 
 const periods = [
     {h: 6, label: "6H"},
@@ -99,6 +96,7 @@ const periods = [
     {h: 48, label: "48H"},
     {h: 72, label: "72H"},
     {h: 168, label: "WEEK"},
+    {h: 720, label: "MONTH"},
 ];
 
 // --- FETCH ---
@@ -120,7 +118,9 @@ async function getPastPrice(h) {
 // --- UPDATE ---
 async function updateData() {
     const current = await getCurrentPrice();
+    let maxWidth = 0;
 
+    // first pass → content + measure
     for (let i = 0; i < periods.length; i++) {
         const p = periods[i];
         const past = await getPastPrice(p.h);
@@ -135,6 +135,20 @@ async function updateData() {
             </span>
         `;
     }
+
+    // measure max width
+    buttons.forEach(btn => {
+        btn.style.width = "auto";
+    });
+
+    buttons.forEach(btn => {
+        maxWidth = Math.max(maxWidth, btn.offsetWidth);
+    });
+
+    // apply equal width
+    buttons.forEach(btn => {
+        btn.style.width = maxWidth + "px";
+    });
 }
 
 // --- SHOW ---
@@ -142,25 +156,22 @@ function showSequence() {
     container.classList.add("visible");
 
     buttons.forEach((btn, i) => {
-        setTimeout(() => btn.classList.add("show"), i * 200);
+        setTimeout(() => btn.classList.add("show"), i * 180);
     });
 }
 
-// --- HIDE (BOTTOM → TOP, 3s) ---
+// --- HIDE (RIGHT) ---
 function hideSequence() {
 
-    // reverse order (bottom first)
     [...buttons].reverse().forEach((btn, i) => {
         setTimeout(() => {
             btn.classList.add("hide");
-        }, i * 250);
+        }, i * 200);
     });
 
-    // container fade after animation
     setTimeout(() => {
         container.classList.remove("visible");
 
-        // reset classes
         buttons.forEach(btn => {
             btn.classList.remove("show", "hide");
         });
