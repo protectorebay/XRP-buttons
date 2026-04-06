@@ -54,10 +54,10 @@ html, body {
     transform: translateX(0);
 }
 
-/* HIDE (SLIDE RIGHT) */
+/* HIDE (← DOĽAVA) */
 .btn.hide {
     opacity: 0;
-    transform: translateX(120px);
+    transform: translateX(-140px);
     transition: all 3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -120,7 +120,6 @@ async function updateData() {
     const current = await getCurrentPrice();
     let maxWidth = 0;
 
-    // first pass → content + measure
     for (let i = 0; i < periods.length; i++) {
         const p = periods[i];
         const past = await getPastPrice(p.h);
@@ -136,16 +135,13 @@ async function updateData() {
         `;
     }
 
-    // measure max width
-    buttons.forEach(btn => {
-        btn.style.width = "auto";
-    });
+    // equal width
+    buttons.forEach(btn => btn.style.width = "auto");
 
     buttons.forEach(btn => {
         maxWidth = Math.max(maxWidth, btn.offsetWidth);
     });
 
-    // apply equal width
     buttons.forEach(btn => {
         btn.style.width = maxWidth + "px";
     });
@@ -160,9 +156,8 @@ function showSequence() {
     });
 }
 
-// --- HIDE (RIGHT) ---
+// --- HIDE (← LEFT) ---
 function hideSequence() {
-
     [...buttons].reverse().forEach((btn, i) => {
         setTimeout(() => {
             btn.classList.add("hide");
