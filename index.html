@@ -2,61 +2,89 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>XRP Change Overlay</title>
+<title>XRP Overlay Modern</title>
+
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        background: transparent;
-        font-family: Arial, sans-serif;
-        overflow: hidden;
-    }
+html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-family: Inter, Arial, sans-serif;
+    overflow: hidden;
+}
 
-    .container {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: 260px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        opacity: 0;
-        transition: opacity 1s ease;
-    }
+/* CONTAINER */
+.container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.8s ease;
+}
 
-    .container.visible {
-        opacity: 1;
-    }
+.container.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
 
-    .btn {
-        background: rgba(0, 0, 0, 0.65);
-        border-radius: 10px;
-        padding: 14px;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        backdrop-filter: blur(6px);
-        transform: translateY(-20px);
-        opacity: 0;
-        transition: all 0.6s ease;
-    }
+/* BUTTON */
+.btn {
+    background: rgba(20,20,20,0.55);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 11px 14px; /* ~20% smaller */
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
 
-    .btn.show {
-        transform: translateY(0);
-        opacity: 1;
-    }
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 
-    .green { color: #00ff9c; }
-    .red { color: #ff4d4d; }
+    opacity: 0;
+    transform: translateY(-15px) scale(0.95);
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* SHOW (bounce / "brawler") */
+.btn.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* hover micro interaction */
+.btn:hover {
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.2);
+}
+
+/* COLORS */
+.green { color: #00ffa2; }
+.red { color: #ff3b3b; }
+
+/* subtle glow */
+.green.glow { text-shadow: 0 0 8px rgba(0,255,150,0.6); }
+.red.glow { text-shadow: 0 0 8px rgba(255,60,60,0.6); }
+
+.label {
+    opacity: 0.7;
+    font-weight: 500;
+    margin-right: 6px;
+}
 </style>
 </head>
+
 <body>
 
 <div class="container" id="container">
-    <div class="btn" id="b1">24H: ...</div>
-    <div class="btn" id="b2">48H: ...</div>
-    <div class="btn" id="b3">72H: ...</div>
-    <div class="btn" id="b4">168H: ...</div>
+    <div class="btn" id="b1"></div>
+    <div class="btn" id="b2"></div>
+    <div class="btn" id="b3"></div>
+    <div class="btn" id="b4"></div>
 </div>
 
 <script>
@@ -70,8 +98,15 @@ const buttons = [
 
 const periods = [24, 48, 72, 168];
 
-// --- FETCH DATA ---
-async function getPrice(hoursAgo) {
+// --- FETCH CURRENT ONCE ---
+async function getCurrentPrice() {
+    const res = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT");
+    const data = await res.json();
+    return parseFloat(data.price);
+}
+
+// --- FETCH HISTORICAL ---
+async function getPastPrice(hoursAgo) {
     const now = Date.now();
     const past = now - hoursAgo * 60 * 60 * 1000;
 
@@ -79,24 +114,28 @@ async function getPrice(hoursAgo) {
     const res = await fetch(url);
     const data = await res.json();
 
-    const pastPrice = parseFloat(data[0][1]);
-
-    const currentRes = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT");
-    const currentData = await currentRes.json();
-    const currentPrice = parseFloat(currentData.price);
-
-    const change = ((currentPrice - pastPrice) / pastPrice) * 100;
-    return change;
+    return parseFloat(data[0][1]);
 }
 
 // --- UPDATE UI ---
 async function updateData() {
-    for (let i = 0; i < periods.length; i++) {
-        const val = await getPrice(periods[i]);
-        const el = buttons[i];
+    const current = await getCurrentPrice();
 
-        const color = val >= 0 ? "green" : "red";
-        el.innerHTML = `${periods[i]}H: <span class="${color}">${val.toFixed(2)}%</span>`;
+    for (let i = 0; i < periods.length; i++) {
+        const past = await getPastPrice(periods[i]);
+        const change = ((current - past) / past) * 100;
+
+        const el = buttons[i];
+        const isPositive = change >= 0;
+
+        const color = isPositive ? "green glow" : "red glow";
+
+        el.innerHTML = `
+            <span class="label">${periods[i]}H</span>
+            <span class="${color}">
+                ${isPositive ? "+" : ""}${change.toFixed(2)}%
+            </span>
+        `;
     }
 }
 
@@ -107,7 +146,7 @@ function showSequence() {
     buttons.forEach((btn, i) => {
         setTimeout(() => {
             btn.classList.add("show");
-        }, i * 300);
+        }, i * 220); // faster cascade
     });
 }
 
